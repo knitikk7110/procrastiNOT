@@ -1,0 +1,6 @@
+*.py
+requirements.txt
+buildozer.spec
+procrastiNOT_source.zip
+.github/
+*.md
