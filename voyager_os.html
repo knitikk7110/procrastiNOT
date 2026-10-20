@@ -1,0 +1,874 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VOYAGER // PERSISTENT CYBERPUNK OS</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700;800&family=Noto+Sans+JP:wght@700;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --background: #06030A;
+      --background-secondary: #0A0711;
+      --background-elevated: #100A19;
+      --magenta: #FF3DF2;
+      --magenta-core: #FFE1FB;
+      --violet: #2A0A5C;
+      --mint: #3DFFB0;
+      --text-primary: #E8DFEF;
+      --text-secondary: #A39AAD;
+      --text-muted: #777080;
+      --separator: rgba(255, 255, 255, 0.09);
+      --font-mono: 'JetBrains Mono', monospace;
+      --font-jp: 'Noto Sans JP', 'MS Gothic', sans-serif;
+      --font-sans: 'Inter', -apple-system, sans-serif;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--background);
+      color: var(--text-primary);
+      font-family: var(--font-sans);
+      overflow: hidden;
+      width: 100vw;
+      height: 100vh;
+      user-select: none;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Persistent Canvas Background */
+    #ambient-canvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    /* Atmospheric floor haze */
+    .ambient-haze {
+      position: fixed;
+      inset: 0;
+      z-index: 1;
+      pointer-events: none;
+      background:
+        radial-gradient(ellipse 110% 60% at 50% 112%, rgba(42, 10, 92, 0.45) 0%, transparent 70%),
+        radial-gradient(ellipse 50% 25% at 50% 102%, rgba(255, 61, 242, 0.06) 0%, transparent 75%);
+    }
+
+    /* Subtle scanlines */
+    .scanlines {
+      position: fixed;
+      inset: 0;
+      z-index: 2;
+      pointer-events: none;
+      background: repeating-linear-gradient(to bottom, rgba(255, 255, 255, 0.025) 0 1px, transparent 1px 3px);
+      mix-blend-mode: overlay;
+    }
+
+    /* ============================================================
+       BOOT SCREEN (Cinematic Japanese Neon Preloader - Ref B & C)
+       ============================================================ */
+    #boot-gate {
+      position: fixed;
+      inset: 0;
+      z-index: 100;
+      background: var(--background);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      outline: none;
+      transition: opacity 0.5s ease;
+    }
+    #boot-gate.opening {
+      animation: gate-tear 0.9s cubic-bezier(0.7, 0, 0.2, 1) forwards;
+    }
+    @keyframes gate-tear {
+      0% { clip-path: polygon(0% 0%, 100% 0%, 100% 100%, 0% 100%, 50% 50%, 50% 50%, 50% 50%, 50% 50%); }
+      40% { clip-path: polygon(0% 0%, 100% 0%, 100% 100%, 0% 100%, 5% 49.6%, 95% 49.6%, 95% 50.4%, 5% 50.4%); }
+      100% { clip-path: polygon(0% 0%, 100% 0%, 100% 100%, 0% 100%, -2% -2%, 102% -2%, 102% 102%, -2% 102%); opacity: 0; visibility: hidden; }
+    }
+
+    #boot-canvas {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      display: block;
+      filter: drop-shadow(0 0 2px var(--magenta)) drop-shadow(0 0 16px var(--magenta));
+    }
+
+    .boot-label-top {
+      position: absolute;
+      top: calc(50% - 75px);
+      font-family: var(--font-mono);
+      font-size: 13px;
+      font-weight: 800;
+      color: var(--mint);
+      letter-spacing: 0.6em;
+      text-indent: 0.6em;
+      text-shadow: 0 0 8px var(--mint);
+      pointer-events: none;
+    }
+
+    .boot-title {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      font-family: var(--font-jp);
+      font-size: clamp(48px, 9vw, 92px);
+      font-weight: 900;
+      color: var(--magenta-core);
+      text-shadow: 0 0 4px var(--magenta), 0 0 24px var(--magenta), 0 0 48px rgba(255, 61, 242, 0.5);
+      letter-spacing: 0.15em;
+      pointer-events: none;
+    }
+
+    .boot-label-bottom {
+      position: absolute;
+      top: calc(50% + 56px);
+      font-family: var(--font-mono);
+      font-size: 13px;
+      font-weight: 800;
+      color: var(--mint);
+      letter-spacing: 0.5em;
+      text-indent: 0.5em;
+      text-shadow: 0 0 8px var(--mint);
+      pointer-events: none;
+    }
+
+    .boot-hud {
+      position: absolute;
+      font-family: var(--font-mono);
+      font-size: 10px;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      color: var(--magenta);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      pointer-events: none;
+    }
+    .boot-tl { top: 22px; left: 24px; }
+    .boot-tr { top: 22px; right: 24px; color: var(--mint); }
+    .boot-bl { bottom: 22px; left: 24px; }
+    .boot-br { bottom: 22px; right: 24px; color: var(--text-muted); }
+    .led {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--mint);
+      box-shadow: 0 0 8px var(--mint);
+      animation: blink 1.2s infinite;
+    }
+    @keyframes blink { 50% { opacity: 0.3; } }
+
+    .progress-bar-track {
+      width: 120px;
+      height: 1.5px;
+      background: rgba(255, 255, 255, 0.12);
+      position: relative;
+    }
+    .progress-bar-fill {
+      position: absolute;
+      left: 0;
+      top: 0;
+      height: 100%;
+      width: 0%;
+      background: var(--magenta);
+      box-shadow: 0 0 8px var(--magenta);
+      transition: width 0.05s linear;
+    }
+
+    /* ============================================================
+       WORKSPACE (Persistent Cyberpunk OS Shell)
+       ============================================================ */
+    #workspace {
+      position: relative;
+      z-index: 10;
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      opacity: 0;
+      transition: opacity 0.6s ease;
+      padding: 8px;
+      gap: 8px;
+    }
+    #workspace.active {
+      opacity: 1;
+    }
+
+    /* Minimal HUD Navigation Rail */
+    .nav-rail {
+      width: 172px;
+      background: var(--background-secondary);
+      border: 1px solid var(--separator);
+      display: flex;
+      flex-direction: column;
+      padding: 10px 8px;
+      border-radius: 4px;
+      flex-shrink: 0;
+    }
+
+    .rail-header {
+      padding: 4px 6px 12px;
+      border-bottom: 1px solid var(--separator);
+      margin-bottom: 8px;
+    }
+    .rail-brand {
+      font-family: var(--font-mono);
+      font-size: 15px;
+      font-weight: 800;
+      color: var(--magenta);
+      letter-spacing: 0.12em;
+    }
+    .rail-sub {
+      font-family: var(--font-jp);
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--magenta-core);
+      margin-top: 2px;
+    }
+    .rail-status {
+      font-family: var(--font-mono);
+      font-size: 9px;
+      color: var(--mint);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 6px;
+    }
+
+    .nav-list {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      flex: 1;
+      overflow-y: auto;
+    }
+    .nav-item {
+      display: flex;
+      align-items: center;
+      padding: 7px 10px;
+      font-family: var(--font-mono);
+      font-size: 10.5px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      background: transparent;
+      border: 1px solid transparent;
+      border-left: 2px solid transparent;
+      cursor: pointer;
+      text-align: left;
+      transition: all 0.15s ease;
+      border-radius: 2px;
+    }
+    .nav-item:hover {
+      background: rgba(255, 255, 255, 0.03);
+      color: var(--text-primary);
+    }
+    .nav-item.active {
+      background: var(--background-elevated);
+      color: var(--text-primary);
+      border-left: 2.5px solid var(--mint);
+    }
+
+    .rail-footer {
+      background: var(--background-elevated);
+      border: 1px solid var(--separator);
+      padding: 8px 10px;
+      border-radius: 3px;
+      margin-top: auto;
+    }
+    .rail-level {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--magenta-core);
+    }
+    .rail-xp-track {
+      width: 100%;
+      height: 3.5px;
+      background: rgba(255, 255, 255, 0.1);
+      margin: 5px 0;
+      border-radius: 2px;
+      overflow: hidden;
+    }
+    .rail-xp-fill {
+      width: 65%;
+      height: 100%;
+      background: var(--mint);
+      box-shadow: 0 0 6px var(--mint);
+    }
+    .rail-xp-text {
+      font-family: var(--font-mono);
+      font-size: 9px;
+      color: var(--text-muted);
+    }
+
+    /* Main Content Area */
+    .workspace-main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      min-width: 0;
+    }
+
+    /* Compact 44dp HUD Header */
+    .hud-header {
+      height: 44px;
+      background: var(--background-secondary);
+      border: 1px solid var(--separator);
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 14px;
+      font-family: var(--font-mono);
+    }
+    .header-section-title {
+      font-size: 11.5px;
+      font-weight: 700;
+      color: var(--text-primary);
+      letter-spacing: 0.1em;
+    }
+    .header-telemetry {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      font-size: 10px;
+    }
+    .tele-tag {
+      color: var(--mint);
+      font-weight: 600;
+    }
+    .tele-lvl {
+      color: var(--magenta-core);
+      font-weight: 700;
+    }
+    .tele-bar {
+      width: 64px;
+      height: 3.5px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+    .tele-bar-fill {
+      width: 65%;
+      height: 100%;
+      background: var(--mint);
+    }
+
+    /* Page Content Viewport */
+    .page-viewport {
+      flex: 1;
+      background: var(--background-secondary);
+      border: 1px solid var(--separator);
+      border-radius: 4px;
+      overflow-y: auto;
+      padding: 14px;
+    }
+
+    /* Command Hero Banner */
+    .command-hero {
+      background: var(--background-elevated);
+      border: 1px solid var(--separator);
+      border-radius: 4px;
+      padding: 16px 20px;
+      margin-bottom: 14px;
+      position: relative;
+      overflow: hidden;
+    }
+    .hero-haze {
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(ellipse 90% 50% at 50% 120%, rgba(42, 10, 92, 0.4) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .hero-top {
+      display: flex;
+      justify-content: space-between;
+      font-family: var(--font-mono);
+      font-size: 10px;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+    }
+    .hero-headline {
+      font-family: var(--font-jp);
+      font-size: 32px;
+      font-weight: 900;
+      color: var(--magenta-core);
+      text-shadow: 0 0 18px var(--magenta);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .hero-core-label {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text-primary);
+      text-shadow: none;
+    }
+    .hero-desc {
+      font-size: 11px;
+      color: var(--text-secondary);
+      margin: 6px 0 12px;
+      max-width: 680px;
+    }
+    .hero-actions {
+      display: flex;
+      gap: 10px;
+    }
+
+    /* HUD Buttons */
+    .hud-btn {
+      font-family: var(--font-mono);
+      font-size: 10.5px;
+      font-weight: 700;
+      padding: 8px 16px;
+      border: 1px solid transparent;
+      border-radius: 3px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.15s ease;
+    }
+    .hud-btn-primary {
+      background: rgba(61, 255, 176, 0.12);
+      border-color: var(--mint);
+      color: var(--mint);
+    }
+    .hud-btn-primary:hover {
+      background: var(--mint);
+      color: #06030A;
+      box-shadow: 0 0 12px rgba(61, 255, 176, 0.4);
+    }
+    .hud-btn-secondary {
+      background: rgba(255, 61, 242, 0.08);
+      border-color: rgba(255, 61, 242, 0.35);
+      color: var(--magenta-core);
+    }
+    .hud-btn-secondary:hover {
+      border-color: var(--magenta);
+      background: rgba(255, 61, 242, 0.16);
+      box-shadow: 0 0 10px rgba(255, 61, 242, 0.3);
+    }
+
+    /* Section Headers */
+    .section-title {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--magenta);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin: 12px 0 8px;
+      padding-bottom: 4px;
+      border-bottom: 1px solid var(--separator);
+    }
+
+    /* Telemetry Matrix Grid */
+    .tele-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+    .tele-card {
+      background: var(--background-elevated);
+      border: 1px solid var(--separator);
+      padding: 10px 12px;
+      border-radius: 3px;
+    }
+    .tele-card-val {
+      font-family: var(--font-mono);
+      font-size: 18px;
+      font-weight: 800;
+      color: var(--mint);
+    }
+    .tele-card-cap {
+      font-family: var(--font-mono);
+      font-size: 9px;
+      color: var(--text-muted);
+      margin-top: 2px;
+      letter-spacing: 0.08em;
+    }
+
+    /* Mission Row */
+    .mission-row {
+      background: var(--background-elevated);
+      border: 1px solid var(--separator);
+      border-left: 2px solid var(--mint);
+      padding: 10px 12px;
+      border-radius: 3px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 6px;
+    }
+    .mission-name {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+    .mission-meta {
+      font-family: var(--font-mono);
+      font-size: 9.5px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    /* Status Bar at bottom */
+    .status-bar {
+      height: 30px;
+      background: var(--background-secondary);
+      border: 1px solid var(--separator);
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      padding: 0 12px;
+      font-family: var(--font-mono);
+      font-size: 10px;
+      color: var(--mint);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Ambient Backdrop -->
+  <canvas id="ambient-canvas"></canvas>
+  <div class="ambient-haze"></div>
+  <div class="scanlines"></div>
+
+  <!-- Boot Preloader Gate (Ref B & C) -->
+  <div id="boot-gate" role="button" tabindex="0" title="Tap to enter system">
+    <canvas id="boot-canvas"></canvas>
+    <div class="boot-label-top" id="boot-label-top">neon</div>
+    <div class="boot-title">ネオン</div>
+    <div class="boot-label-bottom" id="boot-label-bottom">000%</div>
+
+    <div class="boot-hud boot-tl">ネオン / SECTOR 7</div>
+    <div class="boot-hud boot-tr"><span class="led"></span><span id="boot-hud-status">DECODING</span></div>
+    <div class="boot-hud boot-bl">
+      <span id="boot-counter">000</span>
+      <div class="progress-bar-track"><div class="progress-bar-fill" id="boot-fill"></div></div>
+      <span>100</span>
+    </div>
+    <div class="boot-hud boot-br" id="boot-hint">TAP TO SKIP</div>
+  </div>
+
+  <!-- Main Operating System Workspace -->
+  <div id="workspace">
+    <!-- Left Minimal Navigation Rail -->
+    <aside class="nav-rail">
+      <div class="rail-header">
+        <div class="rail-brand">VOYAGER</div>
+        <div class="rail-sub">ボイジャー // OS</div>
+        <div class="rail-status"><span class="led"></span>NET ONLINE</div>
+      </div>
+      <nav class="nav-list">
+        <button class="nav-item active" data-page="home">HOME</button>
+        <button class="nav-item" data-page="missions">MISSIONS</button>
+        <button class="nav-item" data-page="ai">AI HELPER</button>
+        <button class="nav-item" data-page="mood">MOOD LAB</button>
+        <button class="nav-item" data-page="badges">BADGES</button>
+        <button class="nav-item" data-page="insights">INSIGHTS</button>
+        <button class="nav-item" data-page="roast">ROAST ZONE</button>
+        <button class="nav-item" data-page="profile">PROFILE</button>
+        <button class="nav-item" data-page="ranks">RANKS</button>
+        <button class="nav-item" data-page="settings">SETTINGS</button>
+      </nav>
+      <div class="rail-footer">
+        <div class="rail-level">LVL 01</div>
+        <div class="rail-xp-track"><div class="rail-xp-fill"></div></div>
+        <div class="rail-xp-text">65 / 100 XP</div>
+      </div>
+    </aside>
+
+    <!-- Main Workspace -->
+    <main class="workspace-main">
+      <!-- Top 44dp HUD Header -->
+      <header class="hud-header">
+        <div class="header-section-title" id="page-title">// HOME // COMMAND DECK</div>
+        <div class="header-telemetry">
+          <span class="tele-tag">STREAK: 3D</span>
+          <span class="tele-lvl">LVL 01</span>
+          <div class="tele-bar"><div class="tele-bar-fill"></div></div>
+          <span style="color:var(--text-muted);">65/100 XP</span>
+          <span style="color:var(--mint);font-weight:700;">● NOMINAL</span>
+        </div>
+      </header>
+
+      <!-- Active Page Viewport -->
+      <section class="page-viewport" id="page-content">
+        <!-- Command Hero -->
+        <div class="command-hero">
+          <div class="hero-haze"></div>
+          <div class="hero-top">
+            <span>VOYAGER OS // ボイジャー</span>
+            <span style="color:var(--mint);">● ONLINE // SECTOR 07 // KERNEL NOMINAL</span>
+          </div>
+          <div class="hero-headline">
+            ボイジャー
+            <span class="hero-core-label">// VOYAGER COMMAND CORE</span>
+          </div>
+          <p class="hero-desc">Persistent neural command interface. Focus on your active objectives and accelerate execution.</p>
+          <div class="hero-actions">
+            <button class="hud-btn hud-btn-primary" onclick="switchPage('missions')">⚡ FOCUS SPRINT</button>
+            <button class="hud-btn hud-btn-secondary" onclick="switchPage('ai')">🤖 CONSULT AI HELPER</button>
+          </div>
+        </div>
+
+        <!-- Telemetry Matrix -->
+        <div class="section-title">▌ TELEMETRY MATRIX</div>
+        <div class="tele-grid">
+          <div class="tele-card">
+            <div class="tele-card-val" id="stat-total">4</div>
+            <div class="tele-card-cap">TOTAL MISSIONS</div>
+          </div>
+          <div class="tele-card">
+            <div class="tele-card-val" id="stat-cleared">2</div>
+            <div class="tele-card-cap">CLEARED QUESTS</div>
+          </div>
+          <div class="tele-card">
+            <div class="tele-card-val" style="color:var(--magenta-core)">3D</div>
+            <div class="tele-card-cap">ACTIVE STREAK</div>
+          </div>
+          <div class="tele-card">
+            <div class="tele-card-val" style="color:var(--text-primary)">FOCUSED</div>
+            <div class="tele-card-cap">BIOMETRIC MOOD</div>
+          </div>
+        </div>
+
+        <!-- Active Objectives -->
+        <div class="section-title">▌ ACTIVE OBJECTIVE // NEXT UP</div>
+        <div class="mission-row">
+          <div>
+            <div class="mission-name">Implement Persistent Cyberpunk OS Architecture</div>
+            <div class="mission-meta">⚡ HIGH PRIORITY • Due Today • +25 XP</div>
+          </div>
+          <button class="hud-btn hud-btn-primary" style="padding:4px 10px;font-size:9.5px;" onclick="alert('Mission completed! +25 XP awarded.')">COMPLETE</button>
+        </div>
+        <div class="mission-row" style="border-left-color:var(--magenta);">
+          <div>
+            <div class="mission-name">Calibrate Neon Katakana Decoding Matrix</div>
+            <div class="mission-meta">🌱 NORMAL • In Progress • +25 XP</div>
+          </div>
+          <button class="hud-btn hud-btn-secondary" style="padding:4px 10px;font-size:9.5px;" onclick="switchPage('ai')">QUERY AI</button>
+        </div>
+      </section>
+
+      <!-- Bottom Status Bar -->
+      <footer class="status-bar">
+        SYS&gt; PERSISTENT CYBERPUNK KERNEL ONLINE // READY FOR DIRECTIVES
+      </footer>
+    </main>
+  </div>
+
+  <script>
+    // --- Katakana Pools & Helpers ---
+    const KATA = "ｱｲｳｴｵｶｷｸｹｺｻｼｽｾｿﾀﾁﾂﾃﾄﾅﾆﾇﾈﾉﾊﾋﾌﾍﾎﾏﾐﾑﾒﾓﾔﾕﾖﾗﾘﾙﾚﾛﾜｦﾝ0123456789";
+    const randKata = () => KATA[Math.floor(Math.random() * KATA.length)];
+    const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
+
+    // --- Boot Animation Logic (Reference B & C) ---
+    const bootGate = document.getElementById('boot-gate');
+    const bootCanvas = document.getElementById('boot-canvas');
+    const bctx = bootCanvas.getContext('2d');
+    const bootFill = document.getElementById('boot-fill');
+    const bootCounter = document.getElementById('boot-counter');
+    const bootLabelBottom = document.getElementById('boot-label-bottom');
+    const bootHudStatus = document.getElementById('boot-hud-status');
+    const bootHint = document.getElementById('boot-hint');
+    const workspace = document.getElementById('workspace');
+
+    let bootW = 0, bootH = 0;
+    let bootProgress = 0;
+    let bootTarget = 0;
+    let bootDone = false;
+    let bootLocked = false;
+    let bootRushed = false;
+    let bootStart = performance.now();
+
+    const bootCols = [];
+    function resizeBoot() {
+      bootW = bootCanvas.width = window.innerWidth;
+      bootH = bootCanvas.height = window.innerHeight;
+      bootCols.length = 0;
+      for (let i = 0; i < 36; i++) {
+        bootCols.push({
+          x: Math.random() * bootW,
+          y: Math.random() * bootH,
+          speed: 60 + Math.random() * 160,
+          len: 40 + Math.random() * 180,
+          mint: (i % 4 === 0)
+        });
+      }
+    }
+    window.addEventListener('resize', resizeBoot);
+    resizeBoot();
+
+    function renderBoot(now) {
+      if (bootDone) return;
+      const dt = 0.016;
+      bctx.clearRect(0, 0, bootW, bootH);
+
+      // Progress tween
+      const elapsed = (now - bootStart) / 1000;
+      bootTarget = bootRushed ? 1.0 : clamp(elapsed / 3.2, 0, 1.0);
+      bootProgress += (bootTarget - bootProgress) * (bootRushed ? 0.2 : 0.08);
+      if (bootTarget - bootProgress < 0.004) bootProgress = bootTarget;
+
+      const pct = Math.round(bootProgress * 100);
+      const pctStr = String(pct).padStart(3, '0');
+      bootFill.style.width = pct + '%';
+      bootCounter.textContent = pctStr;
+
+      if (pct < 100) {
+        bootLabelBottom.textContent = pctStr + '%';
+        bootHudStatus.textContent = (Math.floor(elapsed * 4) % 2 === 0) ? 'DECODING' : ' DECODING';
+        bootHint.textContent = bootRushed ? 'DECODING...' : 'TAP TO SKIP';
+      } else {
+        bootLocked = true;
+        bootLabelBottom.textContent = 'online';
+        bootHudStatus.textContent = 'SIGNAL LOCKED';
+        bootHint.textContent = 'TAP TO ENTER // SPACE';
+        bootHint.style.color = 'var(--mint)';
+      }
+
+      // Draw falling Katakana code rain
+      bctx.font = '11px JetBrains Mono';
+      bctx.textAlign = 'center';
+      for (const col of bootCols) {
+        col.y += col.speed * dt;
+        if (col.y - col.len > bootH) {
+          col.y = -Math.random() * 100;
+          col.x = Math.random() * bootW;
+        }
+        const grad = bctx.createLinearGradient(0, col.y - col.len, 0, col.y);
+        grad.addColorStop(0, 'rgba(0,0,0,0)');
+        grad.addColorStop(1, col.mint ? 'rgba(61,255,176,0.35)' : 'rgba(255,61,242,0.3)');
+        bctx.strokeStyle = grad;
+        bctx.lineWidth = 1.3;
+        bctx.beginPath();
+        bctx.moveTo(col.x, col.y - col.len);
+        bctx.lineTo(col.x, col.y);
+        bctx.stroke();
+
+        // Tip glyph
+        bctx.fillStyle = col.mint ? '#3DFFB0' : '#FFE1FB';
+        bctx.fillText(randKata(), col.x, col.y + 4);
+      }
+
+      requestAnimationFrame(renderBoot);
+    }
+    requestAnimationFrame(renderBoot);
+
+    function enterWorkspace() {
+      if (!bootLocked) {
+        bootRushed = true;
+      } else {
+        if (bootDone) return;
+        bootDone = true;
+        bootGate.classList.add('opening');
+        setTimeout(() => {
+          bootGate.style.display = 'none';
+          workspace.classList.add('active');
+        }, 850);
+      }
+    }
+    bootGate.addEventListener('click', enterWorkspace);
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        enterWorkspace();
+      }
+    });
+
+    // --- Persistent Ambient Background ---
+    const ambCanvas = document.getElementById('ambient-canvas');
+    const actx = ambCanvas.getContext('2d');
+    let ambW = 0, ambH = 0;
+    const streams = [];
+
+    function resizeAmb() {
+      ambW = ambCanvas.width = window.innerWidth;
+      ambH = ambCanvas.height = window.innerHeight;
+      streams.length = 0;
+      for (let i = 0; i < 24; i++) {
+        streams.push({
+          x: Math.random() * ambW,
+          y: Math.random() * ambH,
+          speed: 40 + Math.random() * 80,
+          len: 30 + Math.random() * 140,
+          isMint: (i % 3 === 0)
+        });
+      }
+    }
+    window.addEventListener('resize', resizeAmb);
+    resizeAmb();
+
+    function renderAmbient() {
+      actx.clearRect(0, 0, ambW, ambH);
+      actx.font = '10px JetBrains Mono';
+      actx.textAlign = 'center';
+
+      for (const st of streams) {
+        st.y += st.speed * 0.016;
+        if (st.y - st.len > ambH) {
+          st.y = -Math.random() * 80;
+          st.x = Math.random() * ambW;
+        }
+        const grad = actx.createLinearGradient(0, st.y - st.len, 0, st.y);
+        grad.addColorStop(0, 'rgba(0,0,0,0)');
+        grad.addColorStop(1, st.isMint ? 'rgba(61,255,176,0.18)' : 'rgba(255,61,242,0.15)');
+        actx.strokeStyle = grad;
+        actx.lineWidth = 1.0;
+        actx.beginPath();
+        actx.moveTo(st.x, st.y - st.len);
+        actx.lineTo(st.x, st.y);
+        actx.stroke();
+
+        actx.fillStyle = st.isMint ? 'rgba(61,255,176,0.7)' : 'rgba(255,225,251,0.65)';
+        actx.fillText(randKata(), st.x, st.y + 4);
+      }
+      requestAnimationFrame(renderAmbient);
+    }
+    requestAnimationFrame(renderAmbient);
+
+    // --- Navigation Switching ---
+    const navItems = document.querySelectorAll('.nav-item');
+    const pageTitle = document.getElementById('page-title');
+    const titles = {
+      home: '// HOME // COMMAND DECK',
+      missions: '// MISSIONS // ACTIVE OBJECTIVES',
+      ai: '// AI HELPER // NEURAL ASSISTANT',
+      mood: '// MOOD LAB // BIOMETRIC LOG',
+      badges: '// BADGES // COMMENDATIONS',
+      insights: '// INSIGHTS // TELEMETRY ANALYTICS',
+      roast: '// ROAST ZONE // MOTIVATIONAL PROTOCOL',
+      profile: '// PROFILE // OPERATOR DOSSIER',
+      ranks: '// RANKS // GLOBAL NETWORK MATRIX',
+      settings: '// SETTINGS // HARDWARE & CONFIG'
+    };
+
+    function switchPage(pageKey) {
+      navItems.forEach(b => {
+        b.classList.toggle('active', b.dataset.page === pageKey);
+      });
+      if (titles[pageKey]) pageTitle.textContent = titles[pageKey];
+    }
+    navItems.forEach(b => {
+      b.addEventListener('click', () => switchPage(b.dataset.page));
+    });
+  </script>
+</body>
+</html>
